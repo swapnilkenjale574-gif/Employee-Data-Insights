@@ -1,0 +1,581 @@
+
+
+USE hr;
+
+SELECT Count(*) FROM emp; -- records = 162
+SELECT Count(*) FROM emp_sal; -- records = 92
+
+-- Right Join
+SELECT * FROM emp e -- "e" --> Alias for table emp
+RIGHT JOIN emp_sal s -- "s" --> Alias for emp_sal
+ON e.eid = s.eid;
+
+-- Left Join
+SELECT e.eid, e.name, s.dept, s.salary  -- So column name should start with alias of table
+FROM emp e -- "e" --> Alias for table emp
+LEFT JOIN emp_sal s -- "s" --> Alias for emp_sal
+ON e.eid = s.eid;
+
+
+-- Inner Join
+SELECT e.eid, e.name, s.dept, s.salary  -- So column name should start with alias of table
+FROM emp e -- "e" --> Alias for table emp
+INNER JOIN emp_sal s -- "s" --> Alias for emp_sal
+ON e.eid = s.eid;
+
+-- ============================================================ 
+
+# PRACTICE QUESTIONS
+# 1. Display Employee ID, Name, Department, and Salary for all employees. 
+
+SELECT 
+    e.eid, e.name, s.dept, s.salary
+FROM
+    emp e
+        JOIN
+    emp_sal s ON e.eid = s.eid;
+
+
+-- 9
+SELECT 
+    e.name, e.email, e.doj, s.dept
+FROM
+    emp e
+        JOIN
+    emp_sal s ON e.eid = s.eid
+WHERE
+    DOJ > 04 / 01 / 2012;
+
+
+-- How to correct data formatting: - 
+-- DML : - Update
+
+-- safe mode should turned off
+SET SQL_SAFE_UPDATES = 0;
+
+SELECT * FROM emp; -- Date format is mm/dd/yyyy
+
+UPDATE emp
+SET dob = str_to_date(dob, "%m/%d/%Y");
+
+-- changing data type we need DDL commands --> Alter
+ALTER TABLE emp
+MODIFY COLUMN dob DATE; -- ooficial format for date MySQL --> YYYY - MM - DD
+
+-- Q9.
+SELECT e.name, e.doj, s.dept, s.salary
+FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid
+WHERE e.doj > "2012-04-01";
+
+
+-- 3. Find pairs of employees having the same designation.
+
+SELECT e1.eid AS emp1_id, e1.name AS emp1_name, e2.eid AS emp2_id, e2.name AS emp2_name, s1.desi
+FROM emp e1
+JOIN emp_sal s1 ON e1.eid = s1.eid
+JOIN emp_sal s2 ON s1.desi = s2.desi AND s1.eid < s2.eid
+JOIN emp e2     ON s2.eid = e2.eid;
+
+-- 4. Find pairs of employees who have the same salary.
+
+SELECT e1.eid AS emp1_id, e2.eid AS emp2_id, s1.salary
+FROM emp_sal s1
+JOIN emp_sal s2 ON s1.salary = s2.salary AND s1.eid < s2.eid;
+
+
+-- 5. Find pairs of employees who joined in the same year (use DOJ).
+
+SELECT e1.eid AS emp1_id, e1.name AS emp1_name, e2.eid AS emp2_id, e2.name AS emp2_name, EXTRACT(YEAR FROM e1.doj) AS joining_year
+FROM emp e1
+JOIN emp e2 ON EXTRACT(YEAR FROM e1.doj) = EXTRACT(YEAR FROM e2.doj) AND e1.eid < e2.eid;
+
+
+-- 6. Within each department, find employee pairs where one earns more than the other.
+
+SELECT s1.dept, s1.eid AS higher_earner_id, s2.eid AS lower_earner_id, s1.salary AS higher_sal, s2.salary AS lower_sal
+FROM emp_sal s1
+JOIN emp_sal s2 ON s1.dept = s2.dept AND s1.salary > s2.salary;
+
+
+-- 7. Find employee pairs who belong to the same city and same department.
+
+SELECT e1.eid AS emp1_id, e2.eid AS emp2_id, e1.city, s1.dept
+FROM emp e1
+JOIN emp_sal s1 ON e1.eid = s1.eid
+JOIN emp e2     ON e1.city = e2.city AND e1.eid < e2.eid
+JOIN emp_sal s2 ON e2.eid = s2.eid AND s1.dept = s2.dept;
+
+
+-- 8. Find pairs of employees in the same department where the salary difference is more than ₹50,000.
+
+SELECT s1.dept, s1.eid AS emp1_id, s2.eid AS emp2_id, ABS(s1.salary - s2.salary) AS salary_diff
+FROM emp_sal s1
+JOIN emp_sal s2 ON s1.dept = s2.dept AND s1.eid < s2.eid
+WHERE ABS(s1.salary - s2.salary) > 50000;
+
+
+-- 9. Find employees who are not the highest paid in their department using a self join.
+
+SELECT DISTINCT s1.eid, s1.dept, s1.salary
+FROM emp_sal s1
+JOIN emp_sal s2 ON s1.dept = s2.dept AND s1.salary < s2.salary;
+
+-- 10. Find employees who earn more than the average salary of their own department using self join logic.
+
+SELECT s1.eid, s1.dept, s1.salary
+FROM emp_sal s1
+JOIN (
+    SELECT dept, AVG(salary) AS avg_sal
+    FROM emp_sal
+    GROUP BY dept
+) dept_avg ON s1.dept = dept_avg.dept
+WHERE s1.salary > dept_avg.avg_sal;
+
+
+
+-- Main Query 
+SELECT * FROM emp_sal e1
+WHERE e1.salary > (SELECT AVG(SALARY) FROM emp_sal e2
+					WHERE e2.dept = e1.dept
+					GROUP BY DEPT
+					); -- Correlated subqueries:
+                    -- The inner query is dependent on the
+                    -- outer query to get desired result
+                    
+
+
+SELECT e.name, e1.salary FROM emp_sal e1
+JOIN emp e 
+ON e.eid = e1.eid
+WHERE e1.salary = (SELECT MAX(SALARY) FROM emp_sal e2
+					-- WHERE e2.dept = e1.dept
+					GROUP BY DEPT
+					);
+
+
+
+
+SELECT datediff( curdate(),doj)/365 FROM emp;
+
+
+-- Display employees who joined earlier than the average 
+-- joining date of their department.
+
+SET SQL_SAFE_UPDATES = 0;
+
+ALTER TABLE emp
+ADD COLUMN Tenure DECIMAL(10,2);
+
+SELECT * FROM emp;
+
+UPDATE emp
+SET tenure = datediff(curdate(), doj)/365;
+
+SELECT * FROM emp
+WHERE tenure > (SELECT AVG(tenure) FROM emp)
+ORDER BY tenure desc;
+
+-- 6. Display employees who work in 
+ -- departments where more than 10 employee exists.
+
+SELECT dept FROM emp_SAL
+GROUP BY dept
+HAVING COUNT(*)>10; -- SUBQUERY LOGIC
+
+-- Main
+SELECT e.eid, e.name, s.dept, s.salary
+FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid
+WHERE s.dept IN (SELECT dept FROM emp_SAL
+GROUP BY dept
+HAVING COUNT(*)>10); -- Multi-row subquery --> The subquery gives multiple values
+					-- in output.
+
+-- Display employees whose salary matches any salary in HR department.
+-- Subquery
+SELECT salary FROM emp_sal
+WHERE dept = "HR"; 
+
+-- MAIN
+SELECT e.eid, e.name, s.dept, s.salary
+FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid
+WHERE s.salary IN (SELECT salary FROM emp_sal
+WHERE dept = "HR") AND s.dept <> "HR";
+
+-- List employees who belong to departments of employees working in DELHI.
+-- subquery
+SELECT s1.dept, e1.city FROM emp_sal s1
+JOIN emp e1
+ON s1.eid = e1.eid
+WHERE e.city = "Delhi";
+
+-- Main
+SELECT * FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid
+WHERE s.dept IN (SELECT s1.dept FROM emp_sal s1
+JOIN emp e1
+ON s1.eid = e1.eid
+WHERE e.city = "Delhi");
+
+-- Display employees whose salary is greater than ALL salaries of HR department. 
+-- list of salaries from hr
+SELECT dept, salary FROM emp_sal
+WHERE dept = "HR";
+
+-- MAIN QUERY
+SELECT * FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid
+WHERE s.salary> ALL(SELECT  S1.salary FROM emp_sal S1
+WHERE S1.dept = "HR");
+
+
+
+SELECT * FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid
+WHERE s.salary< ANY(SELECT  S1.salary FROM emp_sal S1
+WHERE S1.dept = "MIS");
+
+-- CTE: - Common Table expression
+/* 
+It is a expression used to created a temporary table for particular query.
+-- It always starts with : --- > "WITH"
+
+Types of CTEs:-
+1. Normal CTE : - It contains where & order by clauses, select statements only
+2. Aggreagted CTE: - It aggregated function and group by clauses
+3. Complex CTE: - The queries can joined, can have aggreagte functions and also it can
+				performal normal function
+
+
+*/
+
+use hr;
+
+-- Create a CTE that lists all departments from EMP_SAL and display them. 
+
+WITH dept_details as (
+SELECT dept FROM emp_sal
+) 
+SELECT DISTINCT(DEPT) FROM dept_details;
+
+-- Create a CTE to display employees who joined after 1-Jan-2012.
+
+WITH jan_emp as (
+SELECT * FROM emp
+WHERE doj > "2012-01-01"
+)
+SELECT eid, name, city, email, doj FROM jan_emp;
+
+-- Complex CTE write a query to find salaries greater than avg salary of dept.
+WITH average as (
+SELECT dept, AVG(salary) as "avg_salary" FROM emp_sal GROUP BY dept)
+SELECT * FROM emp_sal s 
+JOIN average a 
+ON s.dept = a.dept
+WHERE s.salary > a.avg_salary;
+
+--  Use multiple CTEs to display employee details 
+-- along with department-wise total salary
+
+WITH emp_details as (
+SELECT e.eid, e.name, e.city, e.email, s.dept, s.salary 
+FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid
+), -- A--------------------------------------
+avg_salary_details as (
+SELECT dept,  AVG(salary) as "avg_dept_sal" FROM emp_details GROUP BY dept
+),-- B ----------------------------------------
+
+final_output as (
+SELECT d1.eid, d1.name, d1.city,d1.salary, d2.dept, d2.avg_dept_sal
+FROM emp_details d1
+JOIN avg_salary_details d2
+ON d1.dept = d2.dept
+)-- C------------------------------------------------------------
+
+SELECT * FROM final_output;
+
+
+
+-- Use a CTE to show employee name and 
+-- salary details using JOIN between EMP and EMP_SAL.
+
+WITH emp_sal_details as (SELECT e.name, s.salary
+FROM emp e
+JOIN emp_sal s
+ON e.eid = s.eid)
+SELECT * FROM emp_sal_details;
+
+
+USE hr;
+
+-- Recurcive CTE
+/*
+This query which call itself until the specific condition met
+*/
+
+WITH RECURSIVE rec_roll (n)as (
+	SELECT 1 AS n -- starting/ non-recursive
+    UNION ALL   -- joining
+    SELECT n+1 as n FROM rec_roll-- recursive
+    WHERE n<10 
+)
+SELECT * FROM rec_roll
+WHERE n%2=0;
+
+-- Find the numbers from 1 - 50 which is completely divisible 3 and 5.
+
+WITH RECURSIVE rec_roll (n)as (
+	SELECT 1 AS n -- starting/ non-recursive
+    UNION ALL   -- joining
+    SELECT n+1 as n FROM rec_roll-- recursive
+    WHERE n<50  
+)
+SELECT * FROM rec_roll
+WHERE n%3=0 AND n%5=0;
+
+
+-- CASE
+SELECT eid, salary,
+CASE 
+	WHEN salary <= 50000 THEN "Low_salary"
+    WHEN salary > 50000 THEN "Mid_salary"
+    WHEN salary >= 150000 THEN "High_Salary"
+    ELSE "salary is not mentioned"
+END 
+AS "Salary_satgory"
+FROM emp_sal;
+
+-- Q1-- create a catgory named as "emp_lvl" based on tenure, 
+-- tenure<3 --> entry level, 
+-- tenure>=3 and less than 7 ---> mid senior level
+-- tenure >7 --> senior level ----
+
+SELECT eid, name, tenure,
+CASE
+	WHEN tenure<3 THEN "entry level"
+    WHEN tenure>=3 AND tenure<7 THEN "mid senior level"
+    WHEN tenure>=7 THEN "Senior level"
+END
+as "Emp_level"
+FROM emp;
+
+
+
+/*
+Q2. Create a column "status_increment:" -  
+1.  If a employee has low_salary and tenure>2 years
+then increase his salary by 15%,
+and mention status_increment = "Salary Inceased".
+
+2.  If employee has mid_salary and tenure between 2 and 5 years 
+then mention "Salary will be increased next month by 30%"
+
+3.  if employee has high high_salary then mention 
+"salary increased last month"
+*/
+WITH income_cat as (SELECT s.eid, s.salary, e.tenure,
+CASE 
+	WHEN salary <= 50000 THEN "Low_salary"
+    WHEN salary > 50000 THEN "Mid_salary"
+    WHEN salary >= 150000 THEN "High_Salary"
+    ELSE "salary is not mentioned"
+END 
+AS "Salary_catgory"
+FROM emp_sal s
+JOIN emp e
+ON s.eid = e.eid),
+NEW_SAL AS (SELECT eid, (salary*0.15) as "new_sal", Salary_catgory
+FROM income_cat
+WHERE Salary_catgory = "Low_salary" OR TENURE < 2)
+SELECT eid, new_sal, 
+CASE 
+	WHEN Salary_catgory = "low_salary" THEN "Salary increase 15%"
+    WHEN Salary_catgory = "mid_salary" THEN "Salary will be increased next month by 30%"
+    WHEN Salary_catgory = "high_salary" THEN "salary increased last month"
+    ELSE "NO INCREMENT"
+END as "increment_status"
+FROM new_sal;
+
+
+
+-- Stored Procedure
+
+-- Type I : - Non-parametric stored procedure
+/*
+delimiter //
+CREATE PROCEDURE PROCD_NAME(INPUTS)
+BEGIN
+	-- MAIN QUERY
+END 
+// delimiter;
+
+*/
+
+USE	hr;
+
+-- show the data names as emp and emp_sal
+
+delimiter //
+CREATE PROCEDURE show_data()
+
+BEGIN 
+	SELECT * FROM emp_sal;
+END 
+// delimiter ;
+
+-- call the SP
+CALL show_data;
+
+-- CREATE A STORED PROCEDURE TO SHOW FIRST FIVE 
+-- ROWS OF EMP DATA. 
+
+delimiter //
+CREATE PROCEDURE first_five()
+BEGIN
+	SELECT * FROM emp
+    limit 5;
+END //
+delimiter ; 
+
+
+CALL first_five();
+
+
+-- Type II: - Parametric Procedure
+
+delimiter //
+CREATE PROCEDURE sum_num(IN a int,IN b int ) -- --> input variable definition
+BEGIN
+	DECLARE TOTAL int;
+    SET total = a + b; -- adding value of a and b storing it 
+    -- in total valriable
+    SELECT total; -- show us the output
+    
+END //
+delimiter ; 
+
+CALL sum_num(100,20);
+
+-- Static Variable info
+SET @a = 10; -- Definition variable --> static value
+SET @b = 20;
+SELECT (@a + @b);
+
+-- Create stored procdure in which you take input of dept and 
+-- EID from user to increase their salary by 10%. 
+
+
+
+delimiter //
+CREATE PROCEDURE sal_inc(IN dept text, IN EID int)
+BEGIN
+	SET SQL_SAFE_UPDATES = 0;
+	UPDATE emp_sal
+    SET salary = salary + salary *0.10
+    WHERE dept = dept AND eid = eid ;
+END //
+delimiter ;
+	
+    
+SELECT * FROM EMP_SAL
+WHERE EID =1001;
+
+CALL sal_inc("ops", 1001);
+
+-- OUT paratmeter
+
+delimiter //
+CREATE PROCEDURE sub(IN a decimal(10,2), IN b int, out total int)
+
+BEGIN
+	SET total = a - b;
+    select total;
+END //
+delimiter ;
+
+CALL sub(10.5,2, @total);
+
+-- Type 3: - Store procedur with case:-
+-- Write a stored procedure in which we will take input
+-- from user of an eid and we will tell
+-- whether the employee has low salary(<50000), 
+-- medium salary(50000<=sal<=150000 or 
+-- high salary(>150000).
+
+USE hr;
+
+delimiter //
+CREATE PROCEDURE sal_category(IN emp_id INT)
+BEGIN
+    -- status code
+    
+SELECT salary as "salary",
+		eid as "eid",
+         
+        CASE 
+			WHEN salary< 50000 THEN "low"
+            WHEN salary>=50000 and salary<=150000 THEN "medium"
+            WHEN salary>150000 THEN "High"
+            ELSE "employee not available"
+		END as "Salary_status"
+FROM emp_sal 
+WHERE eid = emp_id;
+
+END //
+delimiter ;
+
+CALL sal_category(1010);
+
+
+    
+SELECT * FROM EMP_sal;
+
+
+-- CREATE A PROCEDURE TO INSERT RECORDS
+delimiter //
+CREATE PROCEDURE insert_value(
+IN emp_id INT,
+IN emp_name VARCHAR(30),
+IN ADDR1_ text,
+IN ADDR2_ text,
+IN city_ VARCHAR(20),
+IN PH BIGINT,
+IN email_ text,
+IN d_birth DATE,
+IN d_join DATE,
+IN dept_ text,
+IN desi_ text,
+IN salary_ double
+)
+BEGIN
+	INSERT INTO emp (eid,name, addr1, addr2, city, phone, email, dob, doj )
+    VALUES(emp_id, emp_name, addr1_, addr2_, city_, ph, email_,d_birth, d_join);
+    
+    UPDATE emp
+    SET tenure = datediff(curdate(), doj)/365
+    WHERE eid = emp_id;
+    
+    INSERT INTO emp_sal(eid, dept, desi, salary)
+    VALUES(emp_id,dept_, desi_, salary_ );
+END //
+delimiter ;
+
+
+CALL insert_value(1200, "Sandeep Shah", "sector 1", "kalranagar", "Delhi", 123456789,"sandeeps1@gmail.com",
+"1997-02-10", "2012-08-20","IT", "VP", 5660025);
+
+SELECT * FROM emp
+WHERE eid = 1200;
+    
+DELETE FROM emp
+WHERE eid = 1200;
