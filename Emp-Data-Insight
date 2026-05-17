@@ -1,4 +1,6 @@
-
+-- ====================================================================================
+-- SEGMENT 1 : EMP DATA ANALYSIS PROJECT SOLUTION
+-- ====================================================================================
 
 USE hr;
 
@@ -25,7 +27,7 @@ ON e.eid = s.eid;
 
 -- ============================================================ 
 
-# PRACTICE QUESTIONS
+
 # 1. Display Employee ID, Name, Department, and Salary for all employees. 
 
 SELECT 
@@ -36,7 +38,7 @@ FROM
     emp_sal s ON e.eid = s.eid;
 
 
--- 9
+-- 
 SELECT 
     e.name, e.email, e.doj, s.dept
 FROM
@@ -62,7 +64,7 @@ SET dob = str_to_date(dob, "%m/%d/%Y");
 ALTER TABLE emp
 MODIFY COLUMN dob DATE; -- ooficial format for date MySQL --> YYYY - MM - DD
 
--- Q9.
+-
 SELECT e.name, e.doj, s.dept, s.salary
 FROM emp e
 JOIN emp_sal s
@@ -177,7 +179,7 @@ SELECT * FROM emp
 WHERE tenure > (SELECT AVG(tenure) FROM emp)
 ORDER BY tenure desc;
 
--- 6. Display employees who work in 
+-- 11. Display employees who work in 
  -- departments where more than 10 employee exists.
 
 SELECT dept FROM emp_SAL
@@ -194,7 +196,7 @@ GROUP BY dept
 HAVING COUNT(*)>10); -- Multi-row subquery --> The subquery gives multiple values
 					-- in output.
 
--- Display employees whose salary matches any salary in HR department.
+--12. Display employees whose salary matches any salary in HR department.
 -- Subquery
 SELECT salary FROM emp_sal
 WHERE dept = "HR"; 
@@ -207,7 +209,7 @@ ON e.eid = s.eid
 WHERE s.salary IN (SELECT salary FROM emp_sal
 WHERE dept = "HR") AND s.dept <> "HR";
 
--- List employees who belong to departments of employees working in DELHI.
+--13. List employees who belong to departments of employees working in DELHI.
 -- subquery
 SELECT s1.dept, e1.city FROM emp_sal s1
 JOIN emp e1
@@ -223,7 +225,7 @@ JOIN emp e1
 ON s1.eid = e1.eid
 WHERE e.city = "Delhi");
 
--- Display employees whose salary is greater than ALL salaries of HR department. 
+--14. Display employees whose salary is greater than ALL salaries of HR department. 
 -- list of salaries from hr
 SELECT dept, salary FROM emp_sal
 WHERE dept = "HR";
@@ -243,19 +245,14 @@ ON e.eid = s.eid
 WHERE s.salary< ANY(SELECT  S1.salary FROM emp_sal S1
 WHERE S1.dept = "MIS");
 
+
+-- ====================================================================================
+-- SEGMENT 2 Common Table expression
+-- ====================================================================================
+
+
+
 -- CTE: - Common Table expression
-/* 
-It is a expression used to created a temporary table for particular query.
--- It always starts with : --- > "WITH"
-
-Types of CTEs:-
-1. Normal CTE : - It contains where & order by clauses, select statements only
-2. Aggreagted CTE: - It aggregated function and group by clauses
-3. Complex CTE: - The queries can joined, can have aggreagte functions and also it can
-				performal normal function
-
-
-*/
 
 use hr;
 
@@ -408,7 +405,12 @@ FROM new_sal;
 
 
 
--- Stored Procedure
+-- ====================================================================================
+-- SEGMENT 3 Stored Procedure
+-- ====================================================================================
+
+
+
 
 -- Type I : - Non-parametric stored procedure
 /*
